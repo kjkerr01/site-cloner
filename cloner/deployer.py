@@ -1,94 +1,42 @@
 import os
-import base64
-import uuid
-from github import Github
-from github import Auth
-import tempfile
 import shutil
+import uuid
+import subprocess
 
 class WebsiteDeployer:
     def __init__(self):
-        # You'll need to set these environment variables
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.github_username = os.getenv('GITHUB_USERNAME')
-    
+
     def deploy_to_github_pages(self, website_data):
-        """Deploy the cloned website to GitHub Pages"""
+        repo_name = f'cloned-site-{uuid.uuid4().hex[:8]}'
+        temp_dir = f'temp_repo_{uuid.uuid4().hex[:8]}'
+        os.makedirs(temp_dir, exist_ok=True)
+
+        # Save HTML
+        with open(f'{temp_dir}/index.html', 'w', encoding='utf-8') as f:
+            f.write(website_data['html'])
+
+        # Copy resources
+        if 'resources' in website_data:
+            for path, local_path in website_data['resources'].items():
+                shutil.copy(local_path, f'{temp_dir}/{os.path.basename(local_path)}')
+
         try:
-            if not self.github_token or not self.github_username:
-                return self._deploy_to_temp_location(website_data)
-            
-            # Create a unique repository name
-            repo_name = f"cloned-site-{uuid.uuid4().hex[:8]}"
-            
-            # Initialize GitHub client
-            auth = Auth.Token(self.github_token)
-            g = Github(auth=auth)
-            user = g.get_user()
-            
-            # Create new repository
-            repo = user.create_repo(
-                repo_name,
-                description="Cloned website",
-                private=False,
-                auto_init=False
-            )
-            
-            # Create necessary files
-            self._create_github_files(repo, website_data)
-            
-            # Enable GitHub Pages
-            repo.create_pages(branch="main", path="/")
-            
-            # Return the GitHub Pages URL
-            return f"https://{self.github_username}.github.io/{repo_name}/"
-            
+            # Init git repo
+            subprocess.run(['git', 'init'], cwd=temp_dir, check=True)
+            subprocess.run(['git', 'checkout', '-b', 'main'], cwd=temp_dir, check=True)
+            subprocess.run(['git', 'add', '.'], cwd=temp_dir, check=True)
+            subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=temp_dir, check=True)
+
+            # Push to GitHub
+            remote_url = f'https://{self.github_username}:{self.github_token}@github.com/{self.github_username}/{repo_name}.git'
+            subprocess.run(['git', 'remote', 'add', 'origin', remote_url], cwd=temp_dir, check=True)
+            subprocess.run(['git', 'push', '-u', 'origin', 'main'], cwd=temp_dir, check=True)
+
+            return f'https://{self.github_username}.github.io/{repo_name}/'
         except Exception as e:
-            print(f"Error deploying to GitHub: {e}")
-            # Fallback to temporary deployment
-            return self._deploy_to_temp_location(website_data)
-    
-    def _create_github_files(self, repo, website_data):
-        """Create all necessary files in the GitHub repository"""
-        
-        # Create index.html
-        repo.create_file("index.html", "Add cloned website", website_data['html'])
-        
-        # Create resources directory and files
-        for resource_path, resource_data in website_data['resources'].items():
-            file_path = f"resources/{self._sanitize_filename(resource_path)}.{resource_data['extension']}"
-            content_base64 = base64.b64encode(resource_data['content']).decode()
-            repo.create_file(file_path, f"Add resource {resource_path}", content_base64)
-        
-        # Create CSS files from extracted code
-        for css_name, css_content in website_data['css_code'].items():
-            if isinstance(css_content, dict):
-                for sub_name, sub_content in css_content.items():
-                    if sub_content:
-                        file_path = f"css/{css_name}_{sub_name}.css"
-                        repo.create_file(file_path, f"Add CSS {css_name}_{sub_name}", sub_content)
-        
-        # Create JS files from extracted code
-        for js_name, js_content in website_data['js_code'].items():
-            if isinstance(js_content, dict):
-                for sub_name, sub_content in js_content.items():
-                    if sub_content:
-                        file_path = f"js/{js_name}_{sub_name}.js"
-                        repo.create_file(file_path, f"Add JS {js_name}_{sub_name}", sub_content)
-    
-    def _deploy_to_temp_location(self, website_data):
-        """Fallback deployment method (for demo purposes)"""
-        # In a real implementation, you might deploy to:
-        # - Netlify
-        # - Vercel
-        # - Render.com
-        # - Or any other hosting service
-        
-        # For now, we'll just return a message
-        # In production, implement actual deployment to your preferred platform
-        return "https://example.com/deployment-not-configured"
-    
-    def _sanitize_filename(self, filename):
-        """Sanitize filename for safe use"""
-        import re
-        return re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+            print(f"GitHub deployment failed: {e}")
+            return None
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
