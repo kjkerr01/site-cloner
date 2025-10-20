@@ -2,4 +2,4 @@
 # Upgrade pip
 pip install --upgrade pip
 # Install Playwright browsers (only Chromium)
-playwright install chromium
+python -m playwright install chromium
