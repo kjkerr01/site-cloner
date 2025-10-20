@@ -16,6 +16,10 @@ COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
 
+RUN pip install playwright
+RUN playwright install chromium
+
+
 COPY . .
 
 CMD ["python", "app.py"]
