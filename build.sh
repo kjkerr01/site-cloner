@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -eux
 
+export PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/src/.playwright
+
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Force playwright to install browsers into the project folder
-mkdir -p .playwright
-PLAYWRIGHT_BROWSERS_PATH=.playwright python -m playwright install chromium
+python -m playwright install chromium
