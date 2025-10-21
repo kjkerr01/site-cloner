@@ -1,4 +1,5 @@
 import os
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/.playwright"
 import asyncio
 from playwright.async_api import async_playwright
 from urllib.parse import urljoin
