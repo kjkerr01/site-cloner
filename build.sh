@@ -1,9 +1,9 @@
-#!/bin/bash
-# Ensure pip is up-to-date
-pip install --upgrade pip
+#!/usr/bin/env bash
+set -eux
 
-# Install Python dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Install Playwright browsers (Chromium only)
-python -m playwright install chromium
+# Force playwright to install browsers into the project folder
+mkdir -p .playwright
+PLAYWRIGHT_BROWSERS_PATH=.playwright python -m playwright install chromium
