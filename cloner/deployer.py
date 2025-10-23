@@ -4,6 +4,10 @@ import shutil
 import uuid
 import subprocess
 
+subprocess.run(["git", "config", "--global", "user.email", "kainoa1kerr@gmail.com"])
+subprocess.run(["git", "config", "--global", "user.name", "site-cloner"])
+
+
 class WebsiteDeployer:
     def __init__(self):
         self.github_token = os.getenv('GITHUB_TOKEN')
@@ -28,8 +32,6 @@ class WebsiteDeployer:
             subprocess.run(['git', 'init'], cwd=temp_dir, check=True)
             subprocess.run(['git', 'checkout', '-b', 'main'], cwd=temp_dir, check=True)
             subprocess.run(['git', 'add', '.'], cwd=temp_dir, check=True)
-            git config --global user.email "kainoa1kerr@gmail.com"
-            git config --global user.name "kjkerr01"
             subprocess.run(["git", "config", "user.email", os.getenv("GITHUB_EMAIL", "noreply@example.com")])
             subprocess.run(["git", "config", "user.name", os.getenv("GITHUB_USERNAME", "site-cloner")])
             subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=temp_dir, check=True)
