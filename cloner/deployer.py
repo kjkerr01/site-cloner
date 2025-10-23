@@ -28,6 +28,8 @@ class WebsiteDeployer:
             subprocess.run(['git', 'init'], cwd=temp_dir, check=True)
             subprocess.run(['git', 'checkout', '-b', 'main'], cwd=temp_dir, check=True)
             subprocess.run(['git', 'add', '.'], cwd=temp_dir, check=True)
+            subprocess.run(["git", "config", "user.email", os.getenv("GITHUB_EMAIL", "noreply@example.com")])
+            subprocess.run(["git", "config", "user.name", os.getenv("GITHUB_USERNAME", "site-cloner")])
             subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=temp_dir, check=True)
 
             # Push to GitHub
