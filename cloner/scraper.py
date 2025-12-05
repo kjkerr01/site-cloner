@@ -6,6 +6,16 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import re
 import requests
+import uuid
+import shutil
+import zipfile
+from flask import Flask, request, send_file
+
+app = Flask(__name__)
+
+# -------------------------
+# SCRAPER
+# -------------------------
 
 class WebsiteScraper:
     def __init__(self):
@@ -81,3 +91,47 @@ class WebsiteScraper:
 
     def _sanitize_filename(self, filename):
         return re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+
+
+scraper = WebsiteScraper()
+
+# -------------------------
+# ZIP DOWNLOAD ENDPOINT
+# -------------------------
+
+@app.route("/clone", methods=["POST"])
+def clone():
+    data = request.json
+    url = data["url"]
+
+    website_data = scraper.scrape_website(url)
+
+    # folder for this download
+    folder = f"site_{uuid.uuid4().hex}"
+    os.makedirs(folder, exist_ok=True)
+
+    # write HTML
+    with open(f"{folder}/index.html", "w", encoding="utf-8") as f:
+        f.write(website_data["html"])
+
+    # copy resources into that folder
+    for _, src_path in website_data["resources"].items():
+        shutil.copy(src_path, os.path.join(folder, os.path.basename(src_path)))
+
+    # zip it
+    zip_path = f"{folder}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                full_path = os.path.join(root, file)
+                arcname = os.path.relpath(full_path, folder)
+                z.write(full_path, arcname)
+
+    # delete folder
+    shutil.rmtree(folder, ignore_errors=True)
+
+    return send_file(zip_path, as_attachment=True)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
